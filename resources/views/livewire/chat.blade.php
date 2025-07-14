@@ -57,39 +57,42 @@
         @endif
 
         <!-- Messages -->
-@foreach ($messages as $msg)
-  @php $isMine = $msg->sender_id === auth()->id(); @endphp
+        @foreach ($messages as $msg)
+          @php $isMine = $msg->sender_id === auth()->id(); @endphp
+          <div class="chat-message flex items-end {{ $isMine ? 'justify-end' : 'justify-start' }}">
+            @unless ($isMine)
+              <img
+                src="{{ $selectedUser->avatar
+                  ? asset('storage/' . $selectedUser->avatar)
+                  : 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
+                alt="{{ $selectedUser->name }}"
+                class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
+                onerror="this.onerror=null; this.src='https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3396.jpg';"
+              >
+            @endunless
 
-  <div class="chat-message flex items-end {{ $isMine ? 'justify-end' : 'justify-start' }}">
-    @unless ($isMine)
-      <img
-        src="{{ $selectedUser->avatar
-          ? asset('storage/' . $selectedUser->avatar)
-          : 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
-        alt="{{ $selectedUser->name }}"
-        class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
-        onerror="this.onerror=null; this.src='https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3396.jpg';"
-      >
-    @endunless
+            <div class="chat-bubble px-4 py-2 rounded-2xl shadow max-w-sm
+                        {{ $isMine ? 'bg-blue-600 text-white rounded-bl-none' : 'bg-gray-200 text-black rounded-br-none' }}">
+              {{ $msg->message }}
+            </div>
 
-    <div class="chat-bubble px-4 py-2 rounded-2xl shadow max-w-sm
-                {{ $isMine ? 'bg-blue-600 text-white rounded-bl-none' : 'bg-gray-200 text-black rounded-br-none' }}">
-      {{ $msg->message }}
-    </div>
+            <span class="text-xs text-gray-500 ml-2 timestamp" data-time="{{ $msg->created_at->format('c') }}">
+              {{ $msg->created_at->format('g:i A') }}
+            </span>
+          </div>
+        @endforeach
 
-    <span class="text-xs text-gray-500 ml-2 timestamp" data-time="{{ $msg->created_at->format('c') }}">
-      {{ $msg->created_at->format('g:i A') }}
-    </span>
-  </div>
-@endforeach
-
-        <div id="typing-indicator" class="px-4 pb-1 text-xs text-gray-400 italic"></div>
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="px-4 pb-1 text-xs text-gray-400 italic">
+          {{-- The Livewire component will update this content in real time --}}
+        </div>
       </section>
 
       <!-- Message Input -->
       <form wire:submit.prevent="submit" class="p-4 border-t bg-white flex items-center gap-2">
         <input
-          wire:model.live="newMessage"
+          wire:model.debounce.300ms="newMessage"
+          @keydown="triggerTyping()"
           type="text"
           placeholder="Type your message…"
           class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none"
@@ -103,52 +106,48 @@
 </div>
 
 <script>
+  // Format timestamps every minute
   function updateTimestamps() {
     document.querySelectorAll('.timestamp').forEach(el => {
-      const dt = new Date(el.getAttribute('data-time'));
-      el.innerText = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour: true });
+      const dt = new Date(el.dataset.time);
+      el.textContent = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour: true });
     });
   }
 
   document.addEventListener('livewire:load', () => {
     updateTimestamps();
-    setInterval(updateTimestamps, 60000); // Update every minute
-    Livewire.hook('message.processed', () => updateTimestamps());
-  });
+    setInterval(updateTimestamps, 60000);
+    Livewire.hook('message.processed', updateTimestamps);
 
-  document.addEventListener('livewire:initialized', () => {
-    Livewire.on('userTyping', (event) => {
-      window.Echo.private(`chat.${event.selectedUserID}`).whisper("typing", {
-        userID: event.userID,
-        userName: event.userName,
+    // Typing indicator logic
+    let typingTimeout;
+    window.triggerTyping = () => {
+      Livewire.emit('typing');
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => Livewire.emit('stoppedTyping'), 2000);
+    };
+
+    // Listen for Livewire browser events and whisper them via Echo
+    Livewire.on('user-typing', data => {
+      Echo.private(`chat.${data.targetUser}`)
+        .whisper('typing', data);
+    });
+
+    Livewire.on('user-stopped-typing', data => {
+      Echo.private(`chat.${data.targetUser}`)
+        .whisper('stopped-typing', data);
+    });
+
+    // Listen for incoming whispers
+    Echo.private(`chat.{{ $loggedID }}`)
+      .listenForWhisper('typing', (e) => {
+        const indicator = document.getElementById('typing-indicator');
+        // You may enhance this by handling multiple typing users
+        indicator.innerText = e.userName + ' is typing...';
+      })
+      .listenForWhisper('stopped-typing', (e) => {
+        const indicator = document.getElementById('typing-indicator');
+        indicator.innerText = '';
       });
-    });
-
-    window.Echo.private(`chat.{{ $loggedID }}`).listenForWhisper('typing', (event) => {
-      const t = document.getElementById('typing-indicator');
-      t.innerText = `${event.userName} is typing...`;
-      setTimeout(() => t.innerText = '', 3000);
-    });
   });
-  // 1. Function to format all timestamps
-  function updateTimestamps() {
-    document.querySelectorAll('.timestamp').forEach(el => {
-      const dt = new Date(el.dataset.time);
-      el.textContent = dt.toLocaleTimeString([], {
-        hour: 'numeric', minute: '2-digit', hour: true
-      });
-    });
-  }
-
-  // 2. Run on Livewire load
-  document.addEventListener('livewire:load', () => {
-    updateTimestamps();                          // initial formatting
-    setInterval(updateTimestamps, 60000);       // refresh every minute
-
-    // 3. Hook into Livewire Lifecycle for updates (sending/receiving messages)
-    Livewire.hook('message.processed', () => {
-      updateTimestamps();
-    });
-  });
-
 </script>
