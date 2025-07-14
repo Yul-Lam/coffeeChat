@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use App\Models\User;
 use App\Models\ChatMessage;
 use Illuminate\Support\Facades\Auth;
@@ -43,12 +44,12 @@ class Chat extends Component
 
     public function updatedNewMessage()
     {
-        $this->emit('typing');
+        $this->dispatch('typing');
     }
 
     public function onTyping()
     {
-        $this->dispatchBrowserEvent('user-typing', [
+        $this->dispatch('user-typing', [
             'targetUser' => $this->selectedUser->id,
             'userId'     => $this->loggedID,
             'userName'   => Auth::user()->name,
@@ -57,7 +58,7 @@ class Chat extends Component
 
     public function onStoppedTyping()
     {
-        $this->dispatchBrowserEvent('user-stopped-typing', [
+        $this->dispatch('user-stopped-typing', [
             'targetUser' => $this->selectedUser->id,
             'userId'     => $this->loggedID,
         ]);
@@ -75,19 +76,17 @@ class Chat extends Component
 
     public function loadMessages()
     {
-        if (! $this->selectedUser) {
+        if (!$this->selectedUser) {
             $this->messages = [];
             return;
         }
 
-        $this->messages = ChatMessage::where(function ($q) {
-                $q->where('sender_id', $this->loggedID)
-                  ->where('receiver_id', $this->selectedUser->id);
-            })
-            ->orWhere(function ($q) {
-                $q->where('sender_id', $this->selectedUser->id)
-                  ->where('receiver_id', $this->loggedID);
-            })
+        $this->messages = ChatMessage::where(fn($q) => $q
+                ->where('sender_id', $this->loggedID)
+                ->where('receiver_id', $this->selectedUser->id))
+            ->orWhere(fn($q) => $q
+                ->where('sender_id', $this->selectedUser->id)
+                ->where('receiver_id', $this->loggedID))
             ->orderBy('created_at')
             ->get();
     }
@@ -103,7 +102,7 @@ class Chat extends Component
         ]);
 
         $this->newMessage = '';
-        $this->onStoppedTyping();
+        $this->dispatch('stoppedTyping');
         $this->loadMessages();
     }
 

@@ -1,4 +1,5 @@
 <div class="chat-root">
+  <!-- Header -->
   <div class="relative mb-6 w-full">
     <flux:heading size="xl" level="1">{{ __('Chat') }}</flux:heading>
     <flux:subheading size="lg" class="mb-6">{{ __('Manage your profile and account settings') }}</flux:subheading>
@@ -24,7 +25,6 @@
         @if ($selectedUser)
           <div class="mt-4 p-4 border rounded">
             <h2>Chatting with: {{ $selectedUser->name }}</h2>
-            <p class="text-gray-900 font-medium">{{ $selectedUser->name }}</p>
             <p class="text-xs text-gray-500">{{ $selectedUser->email }}</p>
           </div>
         @else
@@ -36,11 +36,11 @@
     <!-- Chat Section -->
     <main class="w-3/4 flex flex-col">
       <header class="p-4 border-b bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-800">
+          {{ $selectedUser ? $selectedUser->name : 'No user selected' }}
+        </h2>
         @if ($selectedUser)
-          <h2 class="text-lg font-semibold text-gray-800">{{ $selectedUser->name }}</h2>
           <p class="text-xs text-gray-500">{{ $selectedUser->email }}</p>
-        @else
-          <h2 class="text-lg font-semibold text-gray-800">No user selected</h2>
         @endif
       </header>
 
@@ -52,22 +52,19 @@
               : 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
             alt="{{ $selectedUser->name }}"
             class="w-10 h-10 rounded-full bg-gray-200 object-cover"
-            onerror="this.onerror=null; this.src='https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png';"
+            onerror="this.src='https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png';"
           >
         @endif
 
-        <!-- Messages -->
         @foreach ($messages as $msg)
           @php $isMine = $msg->sender_id === auth()->id(); @endphp
           <div class="chat-message flex items-end {{ $isMine ? 'justify-end' : 'justify-start' }}">
             @unless ($isMine)
               <img
-                src="{{ $selectedUser->avatar
-                  ? asset('storage/' . $selectedUser->avatar)
-                  : 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
+                src="{{ $selectedUser->avatar ? asset('storage/' . $selectedUser->avatar) :
+                  'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
                 alt="{{ $selectedUser->name }}"
                 class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
-                onerror="this.onerror=null; this.src='https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3396.jpg';"
               >
             @endunless
 
@@ -82,13 +79,9 @@
           </div>
         @endforeach
 
-        <!-- Typing Indicator -->
-        <div id="typing-indicator" class="px-4 pb-1 text-xs text-gray-400 italic">
-          {{-- The Livewire component will update this content in real time --}}
-        </div>
+        <div id="typing-indicator" class="px-4 pb-1 text-xs text-gray-400 italic"></div>
       </section>
 
-      <!-- Message Input -->
       <form wire:submit.prevent="submit" class="p-4 border-t bg-white flex items-center gap-2">
         <input
           wire:model.debounce.300ms="newMessage"
@@ -97,7 +90,7 @@
           placeholder="Type your message…"
           class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none"
         />
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-full transition">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-full">
           Send
         </button>
       </form>
@@ -105,12 +98,12 @@
   </div>
 </div>
 
+@push('scripts')
 <script>
-  // Format timestamps every minute
   function updateTimestamps() {
     document.querySelectorAll('.timestamp').forEach(el => {
       const dt = new Date(el.dataset.time);
-      el.textContent = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour: true });
+      el.textContent = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
     });
   }
 
@@ -119,35 +112,32 @@
     setInterval(updateTimestamps, 60000);
     Livewire.hook('message.processed', updateTimestamps);
 
-    // Typing indicator logic
     let typingTimeout;
+
     window.triggerTyping = () => {
-      Livewire.emit('typing');
+      Livewire.dispatch('typing');
       clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => Livewire.emit('stoppedTyping'), 2000);
+      typingTimeout = setTimeout(() => {
+        Livewire.dispatch('stoppedTyping');
+      }, 2000);
     };
 
-    // Listen for Livewire browser events and whisper them via Echo
+    // Whisper typing status via Echo
     Livewire.on('user-typing', data => {
-      Echo.private(`chat.${data.targetUser}`)
-        .whisper('typing', data);
+      Echo.private(`chat.${data.targetUser}`).whisper('typing', data);
     });
 
     Livewire.on('user-stopped-typing', data => {
-      Echo.private(`chat.${data.targetUser}`)
-        .whisper('stopped-typing', data);
+      Echo.private(`chat.${data.targetUser}`).whisper('stopped-typing', data);
     });
 
-    // Listen for incoming whispers
     Echo.private(`chat.{{ $loggedID }}`)
-      .listenForWhisper('typing', (e) => {
-        const indicator = document.getElementById('typing-indicator');
-        // You may enhance this by handling multiple typing users
-        indicator.innerText = e.userName + ' is typing...';
+      .listenForWhisper('typing', e => {
+        document.getElementById('typing-indicator').innerText = `${e.userName} is typing...`;
       })
-      .listenForWhisper('stopped-typing', (e) => {
-        const indicator = document.getElementById('typing-indicator');
-        indicator.innerText = '';
+      .listenForWhisper('stopped-typing', () => {
+        document.getElementById('typing-indicator').innerText = '';
       });
   });
 </script>
+@endpush
