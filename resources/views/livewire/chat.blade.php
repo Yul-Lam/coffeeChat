@@ -1,7 +1,7 @@
 <div class="chat-root">
   <!-- Header -->
   <div class="relative mb-6 w-full">
-    <flux:heading size="xl" level="1">{{ __('Chat') }}</flux:heading>
+    <flux:heading size="xl" level="1">{{ __('Chat Page') }}</flux:heading>
     <flux:subheading size="lg" class="mb-6">{{ __('Manage your profile and account settings') }}</flux:subheading>
     <flux:separator variant="subtle" />
   </div>
@@ -9,7 +9,7 @@
   <div class="flex h-[550px] text-sm border rounded-x1 shadow overflow-hidden bg-black">
     <!-- User List -->
     <aside class="w-1/4 border-r bg-gray-50 flex flex-col">
-      <div class="p-4 font-semibold text-gray-700 border-b text-base">Users</div>
+      <div class="p-4 font-semibold text-gray-700 border-b text-base">CUSTOMERS</div>
       <div class="flex-1 overflow-y-auto divide-y">
         <ul>
           @foreach ($users as $user)
@@ -19,6 +19,12 @@
               class="p-2 cursor-pointer {{ $selectedUser && $selectedUser->id === $user->id ? 'font-bold bg-blue-200' : '' }}"
             >
               {{ $user->name }}
+              <img
+                src="{{ $selectedUser->avatar ? asset('storage/' . $selectedUser->avatar) :
+                  'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
+                alt="{{ $selectedUser->name }}"
+                class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
+              />
             </li>
           @endforeach
         </ul>
@@ -26,6 +32,12 @@
           <div class="mt-4 p-4 border rounded">
             <h2>Chatting with: {{ $selectedUser->name }}</h2>
             <p class="text-xs text-gray-500">{{ $selectedUser->email }}</p>
+            <img
+                src="{{ $selectedUser->avatar ? asset('storage/' . $selectedUser->avatar) :
+                  'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
+                alt="{{ $selectedUser->name }}"
+                class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
+              />
           </div>
         @else
           <p class="mt-4 italic">Select a User to start chatting.</p>
@@ -58,16 +70,15 @@
 
         @foreach ($messages as $msg)
           @php $isMine = $msg->sender_id === auth()->id(); @endphp
-          <div class="chat-message flex items-end {{ $isMine ? 'justify-end' : 'justify-start' }}">
+          <div class="chat-message flex items-end {{ $isMine ? 'justify-start' : 'justify-end' }}">
             @unless ($isMine)
-              <img
+            @endunless
+            <img
                 src="{{ $selectedUser->avatar ? asset('storage/' . $selectedUser->avatar) :
                   'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
                 alt="{{ $selectedUser->name }}"
                 class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
               >
-            @endunless
-
             <div class="chat-bubble px-4 py-2 rounded-2xl shadow max-w-sm
                         {{ $isMine ? 'bg-blue-600 text-white rounded-bl-none' : 'bg-gray-200 text-black rounded-br-none' }}">
               {{ $msg->message }}
@@ -122,7 +133,6 @@
       }, 2000);
     };
 
-    // Whisper typing status via Echo
     Livewire.on('user-typing', data => {
       Echo.private(`chat.${data.targetUser}`).whisper('typing', data);
     });
