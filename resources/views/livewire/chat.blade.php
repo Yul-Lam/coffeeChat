@@ -143,7 +143,7 @@
 
     Echo.private(`chat.{{ $loggedID }}`)
       .listenForWhisper('typing', e => {
-        document.getElementById('typing-indicator').innerText = `${e.userName} is typing...`;
+        document.getElementById('typing-indicator').innerText = `${e.userName} typing...`;
       })
       .listenForWhisper('stopped-typing', () => {
         document.getElementById('typing-indicator').innerText = '';
