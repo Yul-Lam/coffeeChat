@@ -61,8 +61,7 @@
   @php $isMine = $msg->sender_id === auth()->id(); @endphp
 
   <div class="chat-message flex items-end {{ $isMine ? 'justify-end' : 'justify-start' }}">
-    @unless ($isMine)
-      <img
+    <img
         src="{{ $selectedUser->avatar
           ? asset('storage/' . $selectedUser->avatar)
           : 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
@@ -70,6 +69,8 @@
         class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
         onerror="this.onerror=null; this.src='https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3396.jpg';"
       >
+    @unless ($isMine)
+      
     @endunless
 
     <div class="chat-bubble px-4 py-2 rounded-2xl shadow max-w-sm
