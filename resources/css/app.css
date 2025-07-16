@@ -43,7 +43,7 @@
     ::before,
     ::backdrop,
     ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+        border-color: var(--color-grey-200, currentColor);
     }
 }
 
