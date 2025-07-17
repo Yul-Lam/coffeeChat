@@ -84,37 +84,11 @@
               {{ $msg->message }}
             </div>
 
-<<<<<<<<< Temporary merge branch 1
             <span class="text-xs text-gray-500 ml-2 timestamp" data-time="{{ $msg->created_at->format('c') }}">
               {{ $msg->created_at->format('g:i A') }}
             </span>
           </div>
         @endforeach
-=========
-  <div class="chat-message flex items-end {{ $isMine ? 'justify-end' : 'justify-start' }}">
-    <img
-        src="{{ $selectedUser->avatar
-          ? asset('storage/' . $selectedUser->avatar)
-          : 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png' }}"
-        alt="{{ $selectedUser->name }}"
-        class="w-8 h-8 rounded-full object-cover mr-2 bg-gray-100"
-        onerror="this.onerror=null; this.src='https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3396.jpg';"
-      >
-    @unless ($isMine)
-      
-    @endunless
-
-    <div class="chat-bubble px-4 py-2 rounded-2xl shadow max-w-sm
-                {{ $isMine ? 'bg-blue-600 text-white rounded-bl-none' : 'bg-gray-200 text-black rounded-br-none' }}">
-      {{ $msg->message }}
-    </div>
-
-    <span class="text-xs text-gray-500 ml-2 timestamp" data-time="{{ $msg->created_at->format('c') }}">
-      {{ $msg->created_at->format('g:i A') }}
-    </span>
-  </div>
-@endforeach
->>>>>>>>> Temporary merge branch 2
 
         <div id="typing-indicator" class="px-4 pb-1 text-xs text-gray-400 italic"></div>
       </section>
